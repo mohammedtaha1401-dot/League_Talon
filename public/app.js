@@ -1,0 +1,773 @@
+let deleteTarget = null;
+let deleteType = null;
+
+// ==================== API ====================
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "خطایی رخ داد");
+  }
+
+  return data;
+}
+
+// ==================== Navigation ====================
+
+function showSection(sectionId) {
+  document.querySelectorAll(".section").forEach(section => {
+    section.classList.remove("active");
+  });
+
+  const section = document.getElementById(sectionId);
+
+  if (section) {
+    section.classList.add("active");
+  }
+
+  document.querySelectorAll("nav a").forEach(link => {
+    link.classList.remove("active");
+  });
+
+  const activeLink = document.querySelector(
+    `[data-section="${sectionId}"]`
+  );
+
+  if (activeLink) {
+    activeLink.classList.add("active");
+  }
+}
+
+// ==================== Login ====================
+
+async function login() {
+  const username =
+    document.getElementById("username").value.trim();
+
+  const password =
+    document.getElementById("password").value;
+
+  try {
+    await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username,
+        password
+      })
+    });
+
+    alert("ورود موفق بود 🦅");
+
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+
+    await loadAdminData();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+// ==================== Logout ====================
+
+async function logout() {
+  await api("/api/logout", {
+    method: "POST"
+  });
+
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("adminPanel").style.display = "none";
+
+  alert("از پنل خارج شدی");
+}
+
+// ==================== Check Login ====================
+
+async function checkLogin() {
+  try {
+    const data = await api("/api/me");
+
+    if (data.loggedIn) {
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("adminPanel").style.display = "block";
+
+      await loadAdminData();
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== GAMES ====================
+
+async function loadGames() {
+  try {
+    const games = await api("/api/games");
+    const container = document.getElementById("gamesList");
+
+    if (!container) return;
+
+    if (!games.length) {
+      container.innerHTML =
+        "<p>هنوز بازی‌ای ثبت نشده است.</p>";
+      return;
+    }
+
+    container.innerHTML = games.map(game => `
+      <div class="game-card">
+
+        <strong>
+          ${escapeHTML(game.home_team)}
+        </strong>
+
+        <span>
+          ${game.home_score} - ${game.away_score}
+        </span>
+
+        <strong>
+          ${escapeHTML(game.away_team)}
+        </strong>
+
+        <small>
+          ${escapeHTML(game.date || "")}
+        </small>
+
+      </div>
+    `).join("");
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== STANDINGS ====================
+
+async function loadStandings() {
+  try {
+    const standings = await api("/api/standings");
+    const container =
+      document.getElementById("standingsList");
+
+    if (!container) return;
+
+    if (!standings.length) {
+      container.innerHTML =
+        "<p>هنوز جدولی ثبت نشده است.</p>";
+      return;
+    }
+
+    container.innerHTML = `
+      <table>
+
+        <thead>
+          <tr>
+            <th>رتبه</th>
+            <th>تیم</th>
+            <th>بازی</th>
+            <th>برد</th>
+            <th>مساوی</th>
+            <th>باخت</th>
+            <th>امتیاز</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          ${standings.map((team, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${escapeHTML(team.team)}</td>
+              <td>${team.played}</td>
+              <td>${team.wins}</td>
+              <td>${team.draws}</td>
+              <td>${team.losses}</td>
+              <td>
+                <strong>${team.points}</strong>
+              </td>
+            </tr>
+          `).join("")}
+
+        </tbody>
+
+      </table>
+    `;
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== HONORS ====================
+
+async function loadHonors() {
+  try {
+    const honors = await api("/api/honors");
+    renderHonors(honors);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderHonors(honors) {
+  const container =
+    document.getElementById("honorsList");
+
+  if (!container) return;
+
+  if (!honors.length) {
+    container.innerHTML =
+      "<p>هنوز افتخاری ثبت نشده است.</p>";
+    return;
+  }
+
+  container.innerHTML = honors.map((person, index) => `
+    <div class="honor-card">
+
+      <span class="rank">
+        ${index + 1}
+      </span>
+
+      <span class="honor-name">
+        ${escapeHTML(person.name)}
+      </span>
+
+      <strong>
+        ${person.points} امتیاز
+      </strong>
+
+    </div>
+  `).join("");
+}
+
+async function searchHonors() {
+  const input =
+    document.getElementById("honorSearch");
+
+  const query =
+    input.value.trim().toLowerCase();
+
+  try {
+    const honors = await api("/api/honors");
+
+    const filtered = honors.filter(person =>
+      person.name.toLowerCase().includes(query)
+    );
+
+    renderHonors(filtered);
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== NEWS ====================
+
+async function loadNews() {
+  try {
+    const news = await api("/api/news");
+    const container =
+      document.getElementById("newsList");
+
+    if (!container) return;
+
+    if (!news.length) {
+      container.innerHTML =
+        "<p>هنوز خبری منتشر نشده است.</p>";
+      return;
+    }
+
+    container.innerHTML = news.map(item => `
+      <article class="news-card">
+
+        <h3>
+          ${escapeHTML(item.title)}
+        </h3>
+
+        <p>
+          ${escapeHTML(item.content)}
+        </p>
+
+        <small>
+          ${formatDate(item.created_at)}
+        </small>
+
+      </article>
+    `).join("");
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// ==================== ADMIN ====================
+
+async function loadAdminData() {
+  await loadAdminNews();
+  await loadAdminGames();
+  await loadAdminStandings();
+  await loadAdminHonors();
+}
+
+// ==================== ADMIN NEWS ====================
+
+async function loadAdminNews() {
+  const container =
+    document.getElementById("adminNewsList");
+
+  if (!container) return;
+
+  const news = await api("/api/news");
+
+  container.innerHTML = news.map(item => `
+    <div class="admin-item">
+
+      <span>
+        ${escapeHTML(item.title)}
+      </span>
+
+      <div>
+        <button onclick="editNews(${item.id})">
+          ✏️ ویرایش
+        </button>
+
+        <button onclick="askDelete('news', ${item.id})">
+          🗑️ حذف
+        </button>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+async function addNews() {
+  const title = prompt("عنوان خبر:");
+
+  if (!title) return;
+
+  const content = prompt("متن خبر:");
+
+  if (!content) return;
+
+  await api("/api/news", {
+    method: "POST",
+    body: JSON.stringify({
+      title,
+      content
+    })
+  });
+
+  alert("خبر اضافه شد ✅");
+
+  await loadNews();
+  await loadAdminNews();
+}
+
+async function editNews(id) {
+  const title = prompt("عنوان جدید:");
+
+  if (!title) return;
+
+  const content = prompt("متن جدید:");
+
+  if (!content) return;
+
+  await api(`/api/news/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      title,
+      content
+    })
+  });
+
+  alert("خبر ویرایش شد ✅");
+
+  await loadNews();
+  await loadAdminNews();
+}
+
+// ==================== ADMIN GAMES ====================
+
+async function loadAdminGames() {
+  const container =
+    document.getElementById("adminGamesList");
+
+  if (!container) return;
+
+  const games = await api("/api/games");
+
+  container.innerHTML = games.map(game => `
+    <div class="admin-item">
+
+      <span>
+        ${escapeHTML(game.home_team)}
+        ${game.home_score} -
+        ${game.away_score}
+        ${escapeHTML(game.away_team)}
+      </span>
+
+      <div>
+        <button onclick="editGame(${game.id})">
+          ✏️ ویرایش
+        </button>
+
+        <button onclick="askDelete('games', ${game.id})">
+          🗑️ حذف
+        </button>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+async function addGame() {
+  const home_team = prompt("نام تیم اول:");
+
+  if (!home_team) return;
+
+  const away_team = prompt("نام تیم دوم:");
+
+  if (!away_team) return;
+
+  const home_score =
+    Number(prompt("گل تیم اول:", "0")) || 0;
+
+  const away_score =
+    Number(prompt("گل تیم دوم:", "0")) || 0;
+
+  const date = prompt("تاریخ بازی:");
+
+  await api("/api/games", {
+    method: "POST",
+    body: JSON.stringify({
+      home_team,
+      away_team,
+      home_score,
+      away_score,
+      date
+    })
+  });
+
+  alert("بازی اضافه شد ✅");
+
+  await loadGames();
+  await loadAdminGames();
+}
+
+async function editGame(id) {
+  const home_team = prompt("نام تیم اول:");
+
+  if (!home_team) return;
+
+  const away_team = prompt("نام تیم دوم:");
+
+  if (!away_team) return;
+
+  const home_score =
+    Number(prompt("گل تیم اول:", "0")) || 0;
+
+  const away_score =
+    Number(prompt("گل تیم دوم:", "0")) || 0;
+
+  const date = prompt("تاریخ بازی:");
+
+  await api(`/api/games/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      home_team,
+      away_team,
+      home_score,
+      away_score,
+      date
+    })
+  });
+
+  alert("بازی ویرایش شد ✅");
+
+  await loadGames();
+  await loadAdminGames();
+}
+
+// ==================== ADMIN STANDINGS ====================
+
+async function loadAdminStandings() {
+  const container =
+    document.getElementById("adminStandingsList");
+
+  if (!container) return;
+
+  const standings = await api("/api/standings");
+
+  container.innerHTML = standings.map(team => `
+    <div class="admin-item">
+
+      <span>
+        ${escapeHTML(team.team)}
+        — ${team.points} امتیاز
+      </span>
+
+      <div>
+        <button onclick="editStanding(${team.id})">
+          ✏️ ویرایش
+        </button>
+
+        <button onclick="askDelete('standings', ${team.id})">
+          🗑️ حذف
+        </button>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+async function addStanding() {
+  const team = prompt("نام تیم:");
+
+  if (!team) return;
+
+  const played =
+    Number(prompt("بازی:", "0")) || 0;
+
+  const wins =
+    Number(prompt("برد:", "0")) || 0;
+
+  const draws =
+    Number(prompt("مساوی:", "0")) || 0;
+
+  const losses =
+    Number(prompt("باخت:", "0")) || 0;
+
+  const points =
+    Number(prompt("امتیاز:", "0")) || 0;
+
+  await api("/api/standings", {
+    method: "POST",
+    body: JSON.stringify({
+      team,
+      played,
+      wins,
+      draws,
+      losses,
+      points
+    })
+  });
+
+  alert("تیم اضافه شد ✅");
+
+  await loadStandings();
+  await loadAdminStandings();
+}
+
+async function editStanding(id) {
+  const team = prompt("نام تیم:");
+
+  if (!team) return;
+
+  const played =
+    Number(prompt("بازی:", "0")) || 0;
+
+  const wins =
+    Number(prompt("برد:", "0")) || 0;
+
+  const draws =
+    Number(prompt("مساوی:", "0")) || 0;
+
+  const losses =
+    Number(prompt("باخت:", "0")) || 0;
+
+  const points =
+    Number(prompt("امتیاز:", "0")) || 0;
+
+  await api(`/api/standings/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      team,
+      played,
+      wins,
+      draws,
+      losses,
+      points
+    })
+  });
+
+  alert("جدول ویرایش شد ✅");
+
+  await loadStandings();
+  await loadAdminStandings();
+}
+
+// ==================== ADMIN HONORS ====================
+
+async function loadAdminHonors() {
+  const container =
+    document.getElementById("adminHonorsList");
+
+  if (!container) return;
+
+  const honors = await api("/api/honors");
+
+  container.innerHTML = honors.map(person => `
+    <div class="admin-item">
+
+      <span>
+        ${escapeHTML(person.name)}
+        — ${person.points} امتیاز
+      </span>
+
+      <div>
+        <button onclick="editHonor(${person.id})">
+          ✏️ ویرایش
+        </button>
+
+        <button onclick="askDelete('honors', ${person.id})">
+          🗑️ حذف
+        </button>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+async function addHonor() {
+  const name = prompt("نام:");
+
+  if (!name) return;
+
+  const points =
+    Number(prompt("امتیاز:", "0")) || 0;
+
+  await api("/api/honors", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      points
+    })
+  });
+
+  alert("افتخار اضافه شد ✅");
+
+  await loadHonors();
+  await loadAdminHonors();
+}
+
+async function editHonor(id) {
+  const name = prompt("نام:");
+
+  if (!name) return;
+
+  const points =
+    Number(prompt("امتیاز:", "0")) || 0;
+
+  await api(`/api/honors/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name,
+      points
+    })
+  });
+
+  alert("افتخار ویرایش شد ✅");
+
+  await loadHonors();
+  await loadAdminHonors();
+}
+
+// ==================== DELETE ====================
+
+function askDelete(type, id) {
+  deleteType = type;
+  deleteTarget = id;
+
+  const modal =
+    document.getElementById("deleteModal");
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+}
+
+function closeDeleteModal() {
+  const modal =
+    document.getElementById("deleteModal");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  deleteTarget = null;
+  deleteType = null;
+}
+
+async function confirmDelete() {
+  if (!deleteTarget || !deleteType) return;
+
+  try {
+
+    await api(
+      `/api/${deleteType}/${deleteTarget}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    alert("با موفقیت حذف شد 🗑️");
+
+    closeDeleteModal();
+
+    await loadGames();
+    await loadStandings();
+    await loadHonors();
+    await loadNews();
+
+    await loadAdminData();
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+// ==================== HELPERS ====================
+
+function escapeHTML(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(date) {
+  if (!date) return "";
+
+  try {
+    return new Date(date).toLocaleDateString("fa-IR");
+  } catch {
+    return date;
+  }
+}
+
+// ==================== START ====================
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+  await loadGames();
+  await loadStandings();
+  await loadHonors();
+  await loadNews();
+  await checkLogin();
+
+});
