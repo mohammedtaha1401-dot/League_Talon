@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>TALON League</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    🦅 TALON
+  </div>
+
+  <nav>
+    <a href="#" data-section="home" onclick="showSection('home'); return false;">
+      خانه
+    </a>
+
+    <a href="#" data-section="games" onclick="showSection('games'); return false;">
+      بازی ها
+    </a>
+
+    <a href="#" data-section="standings" onclick="showSection('standings'); return false;">
+      جدول
+    </a>
+
+    <a href="#" data-section="honors" onclick="showSection('honors'); return false;">
+      افتخارات
+    </a>
+
+    <a href="#" data-section="news" onclick="showSection('news'); return false;">
+      اخبار
+    </a>
+
+    <a href="#" data-section="admin" onclick="showSection('admin'); return false;">
+      پنل مدیریت
+    </a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- HOME -->
+
+  <section id="home" class="section active">
+
+    <div class="hero">
+
+      <div class="eagle">
+        🦅
+      </div>
+
+      <h1>TALON</h1>
+
+      <h2>
+        تالون یک لیگ نیست!
+        <br>
+        یک خانواده است.
+      </h2>
+
+      <p>
+        به خانه‌ی خانواده تالون خوش آمدید
+      </p>
+
+    </div>
+
+  </section>
+
+  <!-- GAMES -->
+
+  <section id="games" class="section">
+
+    <div class="section-title">
+      <h2>⚽ بازی ها</h2>
+    </div>
+
+    <div id="gamesList" class="cards">
+      <p>در حال بارگذاری...</p>
+    </div>
+
+  </section>
+
+  <!-- STANDINGS -->
+
+  <section id="standings" class="section">
+
+    <div class="section-title">
+      <h2>📊 جدول لیگ</h2>
+    </div>
+
+    <div id="standingsList">
+      <p>در حال بارگذاری...</p>
+    </div>
+
+  </section>
+
+  <!-- HONORS -->
+
+  <section id="honors" class="section">
+
+    <div class="section-title">
+      <h2>🏆 افتخارات</h2>
+    </div>
+
+    <div class="search-box">
+
+      <input
+        type="text"
+        id="honorSearch"
+        placeholder="جستجوی نام..."
+        oninput="searchHonors()"
+      >
+
+    </div>
+
+    <div id="honorsList" class="cards">
+      <p>در حال بارگذاری...</p>
+    </div>
+
+  </section>
+
+  <!-- NEWS -->
+
+  <section id="news" class="section">
+
+    <div class="section-title">
+      <h2>📰 اخبار تالون</h2>
+    </div>
+
+    <div id="newsList" class="cards">
+      <p>در حال بارگذاری...</p>
+    </div>
+
+  </section>
+
+  <!-- ADMIN -->
+
+  <section id="admin" class="section">
+
+    <div id="loginBox" class="admin-login">
+
+      <h2>🔐 پنل مدیریت</h2>
+
+      <input
+        type="text"
+        id="username"
+        placeholder="نام کاربری"
+      >
+
+      <input
+        type="password"
+        id="password"
+        placeholder="رمز عبور"
+      >
+
+      <button onclick="login()">
+        ورود
+      </button>
+
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+
+      <div class="admin-header">
+
+        <h2>
+          ⚙️ مدیریت TALON
+        </h2>
+
+        <button onclick="logout()">
+          خروج
+        </button>
+
+      </div>
+
+      <!-- NEWS ADMIN -->
+
+      <div class="admin-section">
+
+        <h3>📰 مدیریت اخبار</h3>
+
+        <button onclick="addNews()">
+          ➕ افزودن خبر
+        </button>
+
+        <div id="adminNewsList"></div>
+
+      </div>
+
+      <!-- GAMES ADMIN -->
+
+      <div class="admin-section">
+
+        <h3>⚽ مدیریت بازی ها</h3>
+
+        <button onclick="addGame()">
+          ➕ افزودن بازی
+        </button>
+
+        <div id="adminGamesList"></div>
+
+      </div>
+
+      <!-- STANDINGS ADMIN -->
+
+      <div class="admin-section">
+
+        <h3>📊 مدیریت جدول</h3>
+
+        <button onclick="addStanding()">
+          ➕ افزودن تیم
+        </button>
+
+        <div id="adminStandingsList"></div>
+
+      </div>
+
+      <!-- HONORS ADMIN -->
+
+      <div class="admin-section">
+
+        <h3>🏆 مدیریت افتخارات</h3>
+
+        <button onclick="addHonor()">
+          ➕ افزودن افتخار
+        </button>
+
+        <div id="adminHonorsList"></div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<!-- DELETE MODAL -->
+
+<div id="deleteModal" class="modal">
+
+  <div class="modal-content">
+
+    <h3>
+      🗑️ حذف اطلاعات
+    </h3>
+
+    <p>
+      آیا مطمئن هستید که می‌خواهید این مورد را حذف کنید؟
+    </p>
+
+    <div class="modal-buttons">
+
+      <button onclick="confirmDelete()">
+        بله
+      </button>
+
+      <button onclick="closeDeleteModal()">
+        خیر
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<footer>
+  🦅 ᎢᎪᏞᎾᏁ | @League_Talon 🦅
+</footer>
+
+<script src="app.js"></script>
+
+</body>
+  </html>
